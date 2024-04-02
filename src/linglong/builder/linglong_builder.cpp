@@ -31,7 +31,7 @@
 #include <QDir>
 #include <QHash>
 #include <QProcess>
-#include <QScopeGuard>
+//#include <QScopeGuard>
 #include <QTemporaryFile>
 #include <QThread>
 #include <QUrl>
