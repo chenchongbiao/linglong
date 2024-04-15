@@ -7,6 +7,7 @@
 #include "file.h"
 
 #include "linglong/utils/configure.h"
+#include "linglong/utils/error/error.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -102,8 +103,14 @@ quint64 sizeOfDir(const QString &srcPath)
     return size;
 }
 
-QString fileHash(QIODevice &device, QCryptographicHash::Algorithm method)
+utils::error::Result<QString> fileHash(QIODevice &device, QCryptographicHash::Algorithm method)
 {
+    LINGLONG_TRACE("get hash sum of file");
+
+    if (!device.isOpen()) {
+        return LINGLONG_ERR("not open",device.errorString());
+    }
+
     qint64 fileSize = device.size();
     const qint64 bufferSize = 2 * 1024 * 1024;
 
@@ -122,15 +129,17 @@ QString fileHash(QIODevice &device, QCryptographicHash::Algorithm method)
     return QString(hash.result().toHex());
 }
 
-QString fileHash(const QString &path, QCryptographicHash::Algorithm method)
+utils::error::Result<QString> fileHash(const QString &path, QCryptographicHash::Algorithm method)
 {
+    LINGLONG_TRACE("get hash of " + path);
+
     QFile sourceFile(path);
-    if (sourceFile.open(QIODevice::ReadOnly)) {
-        auto hash = fileHash(sourceFile, method);
-        sourceFile.close();
-        return hash;
+    if (!sourceFile.open(QIODevice::ReadOnly)) {
+        return LINGLONG_ERR(sourceFile);
     }
-    return QString();
+
+    auto hash = fileHash(sourceFile, method);
+    return hash;
 }
 
 QString findLinglongConfigPath(const QString &subpath, bool writeable)
@@ -153,4 +162,4 @@ QString findLinglongConfigPath(const QString &subpath, bool writeable)
     return "";
 }
 
-} // namespace linglong
+} // namespace linglong::util

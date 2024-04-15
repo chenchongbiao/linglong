@@ -91,7 +91,7 @@ fetchSources(const std::vector<api::types::v1::BuilderProjectSource> &sources,
             name = QFileInfo(url.fileName()).baseName();
         }
         SourceFetcher sf(source, cfg);
-        auto result = sf.fetch(QDir(destination).filePath(name));
+        auto result = sf.fetch(QDir(destination));
         if (!result) {
             return LINGLONG_ERR(result);
         }

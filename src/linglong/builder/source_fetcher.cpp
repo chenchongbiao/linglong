@@ -9,9 +9,11 @@
 #include "linglong/builder/file.h"
 #include "linglong/utils/command/env.h"
 #include "linglong/utils/error/error.h"
+#include "linglong/utils/finally/finally.h"
 #include "linglong/utils/global/initialize.h"
 
 #include <qeventloop.h>
+#include <qglobal.h>
 #include <qnetworkaccessmanager.h>
 #include <qnetworkreply.h>
 
@@ -98,33 +100,46 @@ auto needDownload(const api::types::v1::BuilderProjectSource &source, QFile &fil
         return true;
     }
 
-    auto digest = util::fileHash(file, QCryptographicHash::Sha256).toStdString();
-    return digest != *source.digest;
+    auto digest = util::fileHash(file, QCryptographicHash::Sha256);
+    if(!digest){
+        qCritical()<<digest.error();
+        Q_ASSERT(false);
+        return true;
+    }
+
+    return digest->toStdString() != *source.digest;
 }
 
 auto fetchFile(const api::types::v1::BuilderProjectSource &source, QDir destination) noexcept
   -> utils::error::Result<QString>
 {
-    LINGLONG_TRACE("fetch file");
+    {
+        LINGLONG_TRACE("fetch file");
 
-    if (!source.url) {
-        return LINGLONG_ERR("url missing");
-    }
+        if (!source.url) {
+            return LINGLONG_ERR("url missing");
+        }
 
-    if (!source.digest) {
-        return LINGLONG_ERR("digest missing");
+        if (!source.digest) {
+            return LINGLONG_ERR("digest missing");
+        }
     }
 
     QUrl url(source.url->c_str());
 
     auto path = destination.absoluteFilePath(url.fileName());
 
+    LINGLONG_TRACE("fetch file to " + path);
+
     QFile file = path;
+
+    file.open(QIODevice::ReadOnly);
 
     if (needDownload(source, file)) {
         file.remove();
     }
 
+    file.close();
     if (!file.open(QIODevice::WriteOnly)) {
         return LINGLONG_ERR(file);
     }
@@ -152,10 +167,15 @@ auto fetchFile(const api::types::v1::BuilderProjectSource &source, QDir destinat
     // 将缓存写入文件
     file.close();
 
-    auto digest = util::fileHash(file, QCryptographicHash::Sha256).toStdString();
-    if (digest != *source.digest) {
+    file.open(QIODevice::ReadOnly);
+    auto digest = util::fileHash(file, QCryptographicHash::Sha256);
+    if(!digest){
+        return LINGLONG_ERR(digest);
+    }
+
+    if (digest->toStdString() != *source.digest) {
         return LINGLONG_ERR(
-          QString::fromStdString("digest mismatched: " + digest + " vs " + *source.digest));
+          QString::fromStdString("digest mismatched: " + digest->toStdString() + " vs " + *source.digest));
     }
 
     return QFileInfo(file).absolutePath();

@@ -8,6 +8,7 @@
 #define LINGLONG_SRC_MODULE_UTIL_FILE_H_
 
 #include "linglong/utils/configure.h"
+#include "linglong/utils/error/error.h"
 
 #include <QCryptographicHash>
 #include <QDebug>
@@ -41,7 +42,7 @@ bool ensureDir(const QString &path);
  * @param method
  * @return
  */
-QString fileHash(QIODevice &device, QCryptographicHash::Algorithm method);
+utils::error::Result<QString> fileHash(QIODevice &device, QCryptographicHash::Algorithm method);
 
 /*!
  * 计算文件hash
@@ -52,7 +53,7 @@ QString fileHash(QIODevice &device, QCryptographicHash::Algorithm method);
  *
  * @return QString: hash字符串
  */
-QString fileHash(const QString &path, QCryptographicHash::Algorithm method);
+utils::error::Result<QString> fileHash(const QString &path, QCryptographicHash::Algorithm method);
 
 /*!
  * 计算文件夹大小
